@@ -89,7 +89,7 @@ The app generates Sieve scripts compatible with Proton Mail. To use a generated 
 3. In Proton Mail, go to Settings > Filters > Add Sieve filter
 4. Paste the script
 
-**Note:** Labels referenced in the script must already exist in Proton Mail before the filter will work correctly.
+**Note:** Labels and folders referenced in the script must already exist in Proton Mail before the filter will work correctly.
 
 ## License
 
