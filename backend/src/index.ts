@@ -89,6 +89,10 @@ app.get('/api/hello', (_req, res) => {
   res.json({ message: 'Hello from the backend!' });
 });
 
+app.get('/api/users', (_req, res) => {
+  res.json({ users: VALID_DATABASES });
+});
+
 app.get('/api/filters', async (req, res) => {
   const db = getDatabase(req, res);
   if (!db) return;

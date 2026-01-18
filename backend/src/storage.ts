@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
@@ -17,9 +17,28 @@ export interface Filter {
 }
 
 const DATA_DIR = '/app/data';
+const CONFIG_DIR = '/app/config';
 
-export const VALID_DATABASES = ['karl', 'amy'] as const;
-export type Database = (typeof VALID_DATABASES)[number];
+interface UsersConfig {
+  users: string[];
+}
+
+function loadUsers(): string[] {
+  const configFile = path.join(CONFIG_DIR, 'users.json');
+  try {
+    if (existsSync(configFile)) {
+      const data = readFileSync(configFile, 'utf-8');
+      const config: UsersConfig = JSON.parse(data);
+      return config.users.map((u) => u.toLowerCase());
+    }
+  } catch (error) {
+    console.error('Failed to load users config:', error);
+  }
+  return ['user1', 'user2'];
+}
+
+export const VALID_DATABASES: readonly string[] = loadUsers();
+export type Database = string;
 
 function getFiltersFile(database: Database): string {
   return path.join(DATA_DIR, `filters-${database}.json`);

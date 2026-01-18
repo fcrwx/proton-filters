@@ -1,6 +1,15 @@
 import { Filter } from '../types';
 
-export type Database = 'karl' | 'amy';
+export type Database = string;
+
+export async function fetchUsers(): Promise<string[]> {
+  const response = await fetch('/api/users');
+  if (!response.ok) {
+    throw new Error('Failed to fetch users');
+  }
+  const data = await response.json();
+  return data.users;
+}
 
 export interface CreateFilterData {
   name: string;

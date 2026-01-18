@@ -8,11 +8,12 @@ import FilterForm from './components/FilterForm';
 import ConfirmDialog from './components/ConfirmDialog';
 import ReportsPage from './components/ReportsPage';
 import { Filter } from './types';
-import { fetchFilters, deleteFilters, Database } from './api/filters';
+import { fetchFilters, fetchUsers, deleteFilters, Database } from './api/filters';
 
 interface ListPageProps {
   filters: Filter[];
   loading: boolean;
+  users: string[];
   database: Database;
   pageSize: number;
   page: number;
@@ -30,7 +31,7 @@ interface ListPageProps {
   onDeleteSelected: (ids: string[]) => void;
 }
 
-function ListPage({ filters, loading, database, pageSize, page, searchQuery, selectedIds, sortModel, selectedReportId, onDatabaseChange, onPageSizeChange, onPageChange, onSearchQueryChange, onSelectedIdsChange, onSortModelChange, onSelectedReportIdChange, onDeleteSelected }: ListPageProps) {
+function ListPage({ filters, loading, users, database, pageSize, page, searchQuery, selectedIds, sortModel, selectedReportId, onDatabaseChange, onPageSizeChange, onPageChange, onSearchQueryChange, onSelectedIdsChange, onSortModelChange, onSelectedReportIdChange, onDeleteSelected }: ListPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentTab = location.pathname === '/reports' ? '/reports' : '/';
@@ -43,6 +44,9 @@ function ListPage({ filters, loading, database, pageSize, page, searchQuery, sel
     navigate(newValue);
   };
 
+  // Capitalize first letter for display
+  const formatUserName = (name: string) => name.charAt(0).toUpperCase() + name.slice(1);
+
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -52,8 +56,11 @@ function ListPage({ filters, loading, database, pageSize, page, searchQuery, sel
         </Tabs>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <Select value={database} onChange={handleDatabaseChange}>
-            <MenuItem value="karl">Karl</MenuItem>
-            <MenuItem value="amy">Amy</MenuItem>
+            {users.map((user) => (
+              <MenuItem key={user} value={user}>
+                {formatUserName(user)}
+              </MenuItem>
+            ))}
           </Select>
         </FormControl>
       </Box>
@@ -209,15 +216,28 @@ function getStoredPageSizes(): Record<string, number> {
 const DEFAULT_SORT_MODEL: GridSortModel = [{ field: 'updatedAt', sort: 'desc' }];
 
 function App() {
-  const [database, setDatabase] = useState<Database>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved === 'karl' || saved === 'amy' ? saved : 'karl';
-  });
+  const [users, setUsers] = useState<string[]>([]);
+  const [database, setDatabase] = useState<Database>('');
   const [pageSizes, setPageSizes] = useState<Record<string, number>>(getStoredPageSizes);
   const [filters, setFilters] = useState<Filter[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+
+  // Fetch users on startup
+  useEffect(() => {
+    fetchUsers()
+      .then((loadedUsers) => {
+        setUsers(loadedUsers);
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved && loadedUsers.includes(saved)) {
+          setDatabase(saved);
+        } else if (loadedUsers.length > 0) {
+          setDatabase(loadedUsers[0]);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Filters table state (persists across tab switches)
   const [page, setPage] = useState(0);
@@ -242,6 +262,7 @@ function App() {
   const handleSortModelChange = useCallback((model: GridSortModel) => setSortModel(model), []);
 
   useEffect(() => {
+    if (!database) return;
     setLoading(true);
     fetchFilters(database)
       .then(setFilters)
@@ -293,6 +314,7 @@ function App() {
             <ListPage
               filters={filters}
               loading={loading}
+              users={users}
               database={database}
               pageSize={pageSize}
               page={page}
@@ -317,6 +339,7 @@ function App() {
             <ListPage
               filters={filters}
               loading={loading}
+              users={users}
               database={database}
               pageSize={pageSize}
               page={page}

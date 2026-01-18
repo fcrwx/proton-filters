@@ -26,3 +26,6 @@ npm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Config (keep example, ignore actual)
+config/users.json
