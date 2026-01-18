@@ -29,3 +29,6 @@ npm-debug.log*
 
 # Config (keep example, ignore actual)
 config/users.json
+
+# Data files (contain personal filter data)
+data/*.json
