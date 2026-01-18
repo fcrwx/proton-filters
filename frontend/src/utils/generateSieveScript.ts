@@ -18,14 +18,15 @@ export function generateSieveScript(filter: Filter): string {
   if (filter.targetFolder || effectiveLabels.length > 0) {
     requires.push('fileinto');
   }
-  if (filter.markRead) {
-    requires.push('imap4flags');
-  }
+  // imap4flags needed for markRead or to check Trash status
+  requires.push('imap4flags');
   if (filter.expirationDays !== null) {
     requires.push('vnd.proton.expire');
   }
 
   // Build conditions
+  // Skip messages already in Trash
+  conditions.push('not hasflag "\\\\Deleted"');
   if (filter.fromAddresses.length > 0) {
     // Separate full email addresses from domain-only patterns
     const fullEmails = filter.fromAddresses.filter((addr) => addr.includes('@'));
