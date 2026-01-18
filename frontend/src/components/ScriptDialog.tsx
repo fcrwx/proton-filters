@@ -19,22 +19,46 @@ interface ScriptDialogProps {
   onClose: () => void;
 }
 
+// Fallback for copying text when clipboard API is unavailable (non-HTTPS)
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text);
+  }
+  // Fallback using execCommand
+  return new Promise((resolve, reject) => {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      resolve();
+    } catch (err) {
+      reject(err);
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  });
+}
+
 export default function ScriptDialog({ open, filter, onClose }: ScriptDialogProps) {
   const [copied, setCopied] = useState(false);
   const script = filter ? generateSieveScript(filter) : '';
 
   useEffect(() => {
     if (open && filter) {
-      navigator.clipboard.writeText(script).then(() => {
+      copyToClipboard(script).then(() => {
         setCopied(true);
-      });
+      }).catch(() => {});
     }
   }, [open, filter, script]);
 
   const handleCopyClick = () => {
-    navigator.clipboard.writeText(script).then(() => {
+    copyToClipboard(script).then(() => {
       setCopied(true);
-    });
+    }).catch(() => {});
   };
 
   const handleClose = () => {
