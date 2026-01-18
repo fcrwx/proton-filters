@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
-import { Container, Typography, Box, FormControl, Select, MenuItem, SelectChangeEvent } from '@mui/material';
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Link, useParams, useNavigate, useLocation } from 'react-router-dom';
+import { Container, Typography, Box, FormControl, Select, MenuItem, SelectChangeEvent, Tabs, Tab } from '@mui/material';
+import { GridRowSelectionModel, GridSortModel } from '@mui/x-data-grid';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import FiltersTable from './components/FiltersTable';
 import FilterForm from './components/FilterForm';
 import ConfirmDialog from './components/ConfirmDialog';
+import ReportsPage from './components/ReportsPage';
 import { Filter } from './types';
 import { fetchFilters, deleteFilters, Database } from './api/filters';
 
@@ -13,22 +15,41 @@ interface ListPageProps {
   loading: boolean;
   database: Database;
   pageSize: number;
+  page: number;
+  searchQuery: string;
+  selectedIds: GridRowSelectionModel;
+  sortModel: GridSortModel;
+  selectedReportId: string;
   onDatabaseChange: (db: Database) => void;
   onPageSizeChange: (size: number) => void;
+  onPageChange: (page: number) => void;
+  onSearchQueryChange: (query: string) => void;
+  onSelectedIdsChange: (ids: GridRowSelectionModel) => void;
+  onSortModelChange: (model: GridSortModel) => void;
+  onSelectedReportIdChange: (id: string) => void;
   onDeleteSelected: (ids: string[]) => void;
 }
 
-function ListPage({ filters, loading, database, pageSize, onDatabaseChange, onPageSizeChange, onDeleteSelected }: ListPageProps) {
+function ListPage({ filters, loading, database, pageSize, page, searchQuery, selectedIds, sortModel, selectedReportId, onDatabaseChange, onPageSizeChange, onPageChange, onSearchQueryChange, onSelectedIdsChange, onSortModelChange, onSelectedReportIdChange, onDeleteSelected }: ListPageProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const currentTab = location.pathname === '/reports' ? '/reports' : '/';
+
   const handleDatabaseChange = (event: SelectChangeEvent) => {
     onDatabaseChange(event.target.value as Database);
+  };
+
+  const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
+    navigate(newValue);
   };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="h4" component="h1" color="primary" fontWeight="bold">
-          Proton Filters
-        </Typography>
+        <Tabs value={currentTab} onChange={handleTabChange}>
+          <Tab label="Filters" value="/" />
+          <Tab label="Reports" value="/reports" />
+        </Tabs>
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <Select value={database} onChange={handleDatabaseChange}>
             <MenuItem value="karl">Karl</MenuItem>
@@ -36,7 +57,29 @@ function ListPage({ filters, loading, database, pageSize, onDatabaseChange, onPa
           </Select>
         </FormControl>
       </Box>
-      <FiltersTable filters={filters} loading={loading} pageSize={pageSize} onPageSizeChange={onPageSizeChange} onDeleteSelected={onDeleteSelected} />
+      {currentTab === '/' ? (
+        <FiltersTable
+          filters={filters}
+          loading={loading}
+          pageSize={pageSize}
+          page={page}
+          searchQuery={searchQuery}
+          selectedIds={selectedIds}
+          sortModel={sortModel}
+          onPageSizeChange={onPageSizeChange}
+          onPageChange={onPageChange}
+          onSearchQueryChange={onSearchQueryChange}
+          onSelectedIdsChange={onSelectedIdsChange}
+          onSortModelChange={onSortModelChange}
+          onDeleteSelected={onDeleteSelected}
+        />
+      ) : (
+        <ReportsPage
+          filters={filters}
+          selectedReportId={selectedReportId}
+          onSelectedReportIdChange={onSelectedReportIdChange}
+        />
+      )}
     </Container>
   );
 }
@@ -50,11 +93,14 @@ interface FormPageProps {
 
 function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormPageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const filter = id ? filters.find((f) => f.id === id) : undefined;
   const isEditing = Boolean(filter);
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+
+  const returnTo = (location.state as { returnTo?: string })?.returnTo || '/';
 
   // Compute unique labels from all other filters (excluding current filter if editing)
   const availableLabels = Array.from(
@@ -86,13 +132,13 @@ function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormP
     if (isDirty) {
       setShowUnsavedDialog(true);
     } else {
-      navigate('/');
+      navigate(returnTo);
     }
   };
 
   const handleConfirmLeave = () => {
     setShowUnsavedDialog(false);
-    navigate('/');
+    navigate(returnTo);
   };
 
   const handleCancelLeave = () => {
@@ -103,7 +149,7 @@ function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormP
     <Container maxWidth="md" sx={{ py: 4 }}>
       <Box sx={{ mb: 4 }}>
         <Link
-          to="/"
+          to={returnTo}
           onClick={handleBackClick}
           style={{
             display: 'inline-flex',
@@ -115,7 +161,9 @@ function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormP
           }}
         >
           <ArrowBackIcon fontSize="small" />
-          <Typography variant="body2">Back to filters</Typography>
+          <Typography variant="body2">
+            {returnTo === '/reports' ? 'Back to reports' : 'Back to filters'}
+          </Typography>
         </Link>
         <Typography variant="h4" component="h1" color="primary" fontWeight="bold">
           {isEditing ? 'Edit Filter' : 'New Filter'}
@@ -128,6 +176,7 @@ function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormP
         availableFolders={availableFolders}
         existingFilterNames={existingFilterNames}
         existingFolderLeafNames={existingFolderLeafNames}
+        returnTo={returnTo}
         onFilterCreated={onFilterCreated}
         onFilterUpdated={onFilterUpdated}
         onDirtyChange={setIsDirty}
@@ -157,6 +206,8 @@ function getStoredPageSizes(): Record<string, number> {
   }
 }
 
+const DEFAULT_SORT_MODEL: GridSortModel = [{ field: 'updatedAt', sort: 'desc' }];
+
 function App() {
   const [database, setDatabase] = useState<Database>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -168,6 +219,15 @@ function App() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
 
+  // Filters table state (persists across tab switches)
+  const [page, setPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedIds, setSelectedIds] = useState<GridRowSelectionModel>([]);
+  const [sortModel, setSortModel] = useState<GridSortModel>(DEFAULT_SORT_MODEL);
+
+  // Reports page state
+  const [selectedReportId, setSelectedReportId] = useState('');
+
   const pageSize = pageSizes[database] ?? DEFAULT_PAGE_SIZE;
 
   const handlePageSizeChange = (newPageSize: number) => {
@@ -175,6 +235,11 @@ function App() {
     setPageSizes(updated);
     localStorage.setItem(PAGE_SIZE_STORAGE_KEY, JSON.stringify(updated));
   };
+
+  const handlePageChange = useCallback((newPage: number) => setPage(newPage), []);
+  const handleSearchQueryChange = useCallback((query: string) => setSearchQuery(query), []);
+  const handleSelectedIdsChange = useCallback((ids: GridRowSelectionModel) => setSelectedIds(ids), []);
+  const handleSortModelChange = useCallback((model: GridSortModel) => setSortModel(model), []);
 
   useEffect(() => {
     setLoading(true);
@@ -230,8 +295,42 @@ function App() {
               loading={loading}
               database={database}
               pageSize={pageSize}
+              page={page}
+              searchQuery={searchQuery}
+              selectedIds={selectedIds}
+              sortModel={sortModel}
+              selectedReportId={selectedReportId}
               onDatabaseChange={handleDatabaseChange}
               onPageSizeChange={handlePageSizeChange}
+              onPageChange={handlePageChange}
+              onSearchQueryChange={handleSearchQueryChange}
+              onSelectedIdsChange={handleSelectedIdsChange}
+              onSortModelChange={handleSortModelChange}
+              onSelectedReportIdChange={setSelectedReportId}
+              onDeleteSelected={handleDeleteSelected}
+            />
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <ListPage
+              filters={filters}
+              loading={loading}
+              database={database}
+              pageSize={pageSize}
+              page={page}
+              searchQuery={searchQuery}
+              selectedIds={selectedIds}
+              sortModel={sortModel}
+              selectedReportId={selectedReportId}
+              onDatabaseChange={handleDatabaseChange}
+              onPageSizeChange={handlePageSizeChange}
+              onPageChange={handlePageChange}
+              onSearchQueryChange={handleSearchQueryChange}
+              onSelectedIdsChange={handleSelectedIdsChange}
+              onSortModelChange={handleSortModelChange}
+              onSelectedReportIdChange={setSelectedReportId}
               onDeleteSelected={handleDeleteSelected}
             />
           }

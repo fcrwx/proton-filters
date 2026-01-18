@@ -111,6 +111,7 @@ interface FilterFormProps {
   availableFolders: string[];
   existingFilterNames: string[];
   existingFolderLeafNames: string[];
+  returnTo?: string;
   onFilterCreated: (filter: Filter) => void;
   onFilterUpdated: (filter: Filter) => void;
   onDirtyChange?: (isDirty: boolean) => void;
@@ -129,7 +130,7 @@ function filterToFormState(filter: Filter): FilterFormState {
   };
 }
 
-export default function FilterForm({ filter, database, availableLabels, availableFolders, existingFilterNames, existingFolderLeafNames, onFilterCreated, onFilterUpdated, onDirtyChange }: FilterFormProps) {
+export default function FilterForm({ filter, database, availableLabels, availableFolders, existingFilterNames, existingFolderLeafNames, returnTo = '/', onFilterCreated, onFilterUpdated, onDirtyChange }: FilterFormProps) {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<FilterFormState>(
     filter ? filterToFormState(filter) : initialState
@@ -197,7 +198,7 @@ export default function FilterForm({ filter, database, availableLabels, availabl
   };
 
   const handleCancel = () => {
-    navigate('/');
+    navigate(returnTo);
   };
 
   const handleSave = async () => {
@@ -220,7 +221,7 @@ export default function FilterForm({ filter, database, availableLabels, availabl
         const newFilter = await createFilter(database, filterData);
         onFilterCreated(newFilter);
       }
-      navigate('/');
+      navigate(returnTo);
     } catch (error) {
       console.error('Failed to save filter:', error);
       setSaving(false);

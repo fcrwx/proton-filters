@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, TextField, InputAdornment } from '@mui/material';
-import { DataGrid, GridColDef, GridRowSelectionModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridRowSelectionModel, GridSortModel } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CodeIcon from '@mui/icons-material/Code';
 import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import { Filter } from '../types';
 import { formatRelativeTime } from '../utils/formatRelativeTime';
 import ScriptDialog from './ScriptDialog';
@@ -26,7 +27,15 @@ interface FiltersTableProps {
   filters: Filter[];
   loading?: boolean;
   pageSize: number;
+  page: number;
+  searchQuery: string;
+  selectedIds: GridRowSelectionModel;
+  sortModel: GridSortModel;
   onPageSizeChange: (size: number) => void;
+  onPageChange: (page: number) => void;
+  onSearchQueryChange: (query: string) => void;
+  onSelectedIdsChange: (ids: GridRowSelectionModel) => void;
+  onSortModelChange: (model: GridSortModel) => void;
   onDeleteSelected: (ids: string[]) => void;
 }
 
@@ -51,12 +60,9 @@ function EmptyState() {
   );
 }
 
-export default function FiltersTable({ filters, loading = false, pageSize, onPageSizeChange, onDeleteSelected }: FiltersTableProps) {
+export default function FiltersTable({ filters, loading = false, pageSize, page, searchQuery, selectedIds, sortModel, onPageSizeChange, onPageChange, onSearchQueryChange, onSelectedIdsChange, onSortModelChange, onDeleteSelected }: FiltersTableProps) {
   const navigate = useNavigate();
-  const [selectedIds, setSelectedIds] = useState<GridRowSelectionModel>([]);
   const [scriptDialogFilter, setScriptDialogFilter] = useState<Filter | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(0);
   const [, setTick] = useState(0);
 
   // Auto-refresh relative times every minute
@@ -68,8 +74,11 @@ export default function FiltersTable({ filters, loading = false, pageSize, onPag
   // Clear selections for deleted items
   useEffect(() => {
     const filterIds = new Set(filters.map((f) => f.id));
-    setSelectedIds((prev) => prev.filter((id) => filterIds.has(id as string)));
-  }, [filters]);
+    const validIds = selectedIds.filter((id) => filterIds.has(id as string));
+    if (validIds.length !== selectedIds.length) {
+      onSelectedIdsChange(validIds);
+    }
+  }, [filters, selectedIds, onSelectedIdsChange]);
 
   const filteredFilters = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -83,7 +92,7 @@ export default function FiltersTable({ filters, loading = false, pageSize, onPag
   };
 
   const handleSelectionChange = (newSelection: GridRowSelectionModel) => {
-    setSelectedIds(newSelection);
+    onSelectedIdsChange(newSelection);
   };
 
   const handleDelete = () => {
@@ -157,12 +166,23 @@ export default function FiltersTable({ filters, loading = false, pageSize, onPag
           placeholder="Search filters..."
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => onSearchQueryChange(e.target.value)}
           slotProps={{
             input: {
               startAdornment: (
                 <InputAdornment position="start">
                   <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: searchQuery && (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => onSearchQueryChange('')}
+                    edge="end"
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
                 </InputAdornment>
               ),
             },
@@ -199,18 +219,15 @@ export default function FiltersTable({ filters, loading = false, pageSize, onPag
         keepNonExistentRowsSelected
         paginationModel={{ pageSize, page }}
         onPaginationModelChange={(model) => {
-          setPage(model.page);
+          onPageChange(model.page);
           if (model.pageSize !== pageSize) {
             onPageSizeChange(model.pageSize);
           }
         }}
+        sortModel={sortModel}
+        onSortModelChange={onSortModelChange}
         pageSizeOptions={[10, 25, 50]}
         disableRowSelectionOnClick
-        initialState={{
-          sorting: {
-            sortModel: [{ field: 'updatedAt', sort: 'desc' }],
-          },
-        }}
         onRowClick={(params, event) => {
           const target = event.target as HTMLElement;
           if (target.closest('.MuiCheckbox-root') || target.closest('.MuiIconButton-root')) {
