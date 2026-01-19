@@ -167,6 +167,7 @@ export default function FiltersTable({ filters, loading = false, pageSize, page,
           size="small"
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && onSearchQueryChange('')}
           slotProps={{
             input: {
               startAdornment: (
