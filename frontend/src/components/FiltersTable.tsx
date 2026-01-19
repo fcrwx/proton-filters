@@ -142,7 +142,7 @@ export default function FiltersTable({ filters, loading = false, pageSize, page,
     },
   ];
 
-  if (filters.length === 0) {
+  if (filters.length === 0 && !loading) {
     return (
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
