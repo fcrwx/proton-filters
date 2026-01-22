@@ -236,6 +236,7 @@ export default function FilterForm({ filter, database, availableLabels, availabl
           value={formState.name}
           onChange={(e) => handleChange('name', e.target.value)}
           fullWidth
+          autoFocus
           error={!saving && Boolean(nameError)}
           helperText={!saving ? nameError : ''}
         />
