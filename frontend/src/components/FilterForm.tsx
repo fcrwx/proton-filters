@@ -15,8 +15,9 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { createFilter, updateFilter, Database } from '../api/filters';
+import { createFilter, updateFilter, deleteFilters, Database } from '../api/filters';
 import { Filter } from '../types';
+import ConfirmDialog from './ConfirmDialog';
 
 // Get the leaf name of a folder path (e.g., "Work/Projects" -> "Projects")
 function getFolderLeafName(folderPath: string): string {
@@ -114,6 +115,7 @@ interface FilterFormProps {
   returnTo?: string;
   onFilterCreated: (filter: Filter) => void;
   onFilterUpdated: (filter: Filter) => void;
+  onFilterDeleted: (id: string) => void;
   onDirtyChange?: (isDirty: boolean) => void;
 }
 
@@ -130,7 +132,7 @@ function filterToFormState(filter: Filter): FilterFormState {
   };
 }
 
-export default function FilterForm({ filter, database, availableLabels, availableFolders, existingFilterNames, existingFolderLeafNames, returnTo = '/', onFilterCreated, onFilterUpdated, onDirtyChange }: FilterFormProps) {
+export default function FilterForm({ filter, database, availableLabels, availableFolders, existingFilterNames, existingFolderLeafNames, returnTo = '/', onFilterCreated, onFilterUpdated, onFilterDeleted, onDirtyChange }: FilterFormProps) {
   const navigate = useNavigate();
   const [formState, setFormState] = useState<FilterFormState>(
     filter ? filterToFormState(filter) : initialState
@@ -139,6 +141,8 @@ export default function FilterForm({ filter, database, availableLabels, availabl
   const [originalState, setOriginalState] = useState<FilterFormState>(
     filter ? filterToFormState(filter) : initialState
   );
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isEditing = Boolean(filter);
 
   const validation = useMemo(
@@ -227,6 +231,20 @@ export default function FilterForm({ filter, database, availableLabels, availabl
     } catch (error) {
       console.error('Failed to save filter:', error);
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!filter) return;
+    setDeleting(true);
+    try {
+      await deleteFilters(database, [filter.id]);
+      onFilterDeleted(filter.id);
+      navigate(returnTo);
+    } catch (error) {
+      console.error('Failed to delete filter:', error);
+      setDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -393,15 +411,38 @@ export default function FilterForm({ filter, database, availableLabels, availabl
           />
         </Box>
 
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', pt: 2 }}>
-          <Button variant="outlined" onClick={handleCancel} disabled={saving}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleSave} disabled={saving || Boolean(validation.error) || Boolean(nameError)}>
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', pt: 2 }}>
+          <Box>
+            {isEditing && (
+              <Button
+                variant="outlined"
+                color="error"
+                startIcon={<DeleteIcon />}
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={saving || deleting}
+              >
+                Delete
+              </Button>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button variant="outlined" onClick={handleCancel} disabled={saving || deleting}>
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={handleSave} disabled={saving || deleting || Boolean(validation.error) || Boolean(nameError)}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+          </Box>
         </Box>
       </Stack>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        title="Delete Filter"
+        message={`Are you sure you want to delete "${filter?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setShowDeleteDialog(false)}
+      />
     </Paper>
   );
 }

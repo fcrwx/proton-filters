@@ -96,9 +96,10 @@ interface FormPageProps {
   database: Database;
   onFilterCreated: (filter: Filter) => void;
   onFilterUpdated: (filter: Filter) => void;
+  onFilterDeleted: (id: string) => void;
 }
 
-function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormPageProps) {
+function FormPage({ filters, database, onFilterCreated, onFilterUpdated, onFilterDeleted }: FormPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
@@ -186,6 +187,7 @@ function FormPage({ filters, database, onFilterCreated, onFilterUpdated }: FormP
         returnTo={returnTo}
         onFilterCreated={onFilterCreated}
         onFilterUpdated={onFilterUpdated}
+        onFilterDeleted={onFilterDeleted}
         onDirtyChange={setIsDirty}
       />
       <ConfirmDialog
@@ -283,6 +285,10 @@ function App() {
     setFilters((prev) => prev.map((f) => (f.id === filter.id ? filter : f)));
   };
 
+  const handleFilterDeleted = (id: string) => {
+    setFilters((prev) => prev.filter((f) => f.id !== id));
+  };
+
   const handleDeleteSelected = (ids: string[]) => {
     setPendingDeleteIds(ids);
     setDeleteDialogOpen(true);
@@ -366,6 +372,7 @@ function App() {
               database={database}
               onFilterCreated={handleFilterCreated}
               onFilterUpdated={handleFilterUpdated}
+              onFilterDeleted={handleFilterDeleted}
             />
           }
         />
@@ -377,6 +384,7 @@ function App() {
               database={database}
               onFilterCreated={handleFilterCreated}
               onFilterUpdated={handleFilterUpdated}
+              onFilterDeleted={handleFilterDeleted}
             />
           }
         />
