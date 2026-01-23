@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Box, Typography, Button, IconButton, Tooltip, TextField, InputAdornment } from '@mui/material';
 import { DataGrid, GridColDef, GridRowSelectionModel, GridSortModel } from '@mui/x-data-grid';
 import { useNavigate } from 'react-router-dom';
@@ -62,6 +62,7 @@ function EmptyState() {
 
 export default function FiltersTable({ filters, loading = false, pageSize, page, searchQuery, selectedIds, sortModel, onPageSizeChange, onPageChange, onSearchQueryChange, onSelectedIdsChange, onSortModelChange, onDeleteSelected }: FiltersTableProps) {
   const navigate = useNavigate();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [scriptDialogFilter, setScriptDialogFilter] = useState<Filter | null>(null);
   const [, setTick] = useState(0);
 
@@ -168,6 +169,8 @@ export default function FiltersTable({ filters, loading = false, pageSize, page,
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Escape' && onSearchQueryChange('')}
+          autoFocus
+          inputRef={searchInputRef}
           slotProps={{
             input: {
               startAdornment: (
@@ -179,7 +182,10 @@ export default function FiltersTable({ filters, loading = false, pageSize, page,
                 <InputAdornment position="end">
                   <IconButton
                     size="small"
-                    onClick={() => onSearchQueryChange('')}
+                    onClick={() => {
+                      onSearchQueryChange('');
+                      searchInputRef.current?.focus();
+                    }}
                     edge="end"
                   >
                     <ClearIcon fontSize="small" />
