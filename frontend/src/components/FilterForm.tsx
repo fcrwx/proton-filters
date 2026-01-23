@@ -217,11 +217,13 @@ export default function FilterForm({ filter, database, availableLabels, availabl
       if (isEditing && filter) {
         const updatedFilter = await updateFilter(database, filter.id, filterData);
         onFilterUpdated(updatedFilter);
+        navigate(returnTo);
       } else {
         const newFilter = await createFilter(database, filterData);
         onFilterCreated(newFilter);
+        // Defer navigation to allow React to process the state update
+        setTimeout(() => navigate(returnTo), 0);
       }
-      navigate(returnTo);
     } catch (error) {
       console.error('Failed to save filter:', error);
       setSaving(false);
