@@ -217,6 +217,7 @@ export default function FiltersTable({ filters, loading = false, pageSize, page,
         </Box>
       </Box>
       <DataGrid
+        key={filteredFilters.length}
         rows={filteredFilters}
         columns={columns}
         loading={loading}
