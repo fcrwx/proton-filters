@@ -170,6 +170,8 @@ export default function FiltersTable({ filters, loading = false, pageSize, page,
           onChange={(e) => onSearchQueryChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Escape' && onSearchQueryChange('')}
           autoFocus
+          autoCorrect="off"
+          spellCheck={false}
           inputRef={searchInputRef}
           slotProps={{
             input: {
